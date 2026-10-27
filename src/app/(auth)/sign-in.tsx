@@ -1,66 +1,125 @@
-import { useSignIn } from "@clerk/clerk-expo";
-import { Link, useRouter } from "expo-router";
-import React from "react";
-import { Pressable, Text, TextInput, View } from "react-native";
+import useSocialAuth from "@/hooks/useSocialAuth";
+import { FontAwesome, FontAwesome6 } from "@expo/vector-icons";
+import { Image } from "expo-image";
+import { Pressable, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function SignInScreen() {
-  const { signIn, setActive, isLoaded } = useSignIn();
-  const router = useRouter();
+  const { handleSocialAuth, loadingStrategy } = useSocialAuth();
 
-  const [emailAddress, setEmailAddress] = React.useState("");
-  const [password, setPassword] = React.useState("");
+  const isGoogleClicked = loadingStrategy === "oauth_google";
+  const isAppleClicked = loadingStrategy === "oauth_apple";
+  const isGitHubClicked = loadingStrategy === "oauth_github";
 
-  const onSignInPress = async () => {
-    if (!isLoaded) return;
-
-    try {
-      const signInAttempt = await signIn.create({
-        identifier: emailAddress,
-        password,
-      });
-
-      if (signInAttempt.status === "complete") {
-        await setActive({ session: signInAttempt.createdSessionId });
-        router.replace("/");
-      } else {
-        console.error(JSON.stringify(signInAttempt, null, 2));
-      }
-    } catch (err) {
-      console.error(JSON.stringify(err, null, 2));
-    }
-  };
+  const isLoading = isAppleClicked || isGitHubClicked || isGoogleClicked;
 
   return (
-    <View className="flex-1 justify-center bg-white p-6">
-      <Text className="mb-6 text-2xl font-bold text-black">Sign in</Text>
-      <TextInput
-        autoCapitalize="none"
-        value={emailAddress}
-        placeholder="Enter email"
-        placeholderTextColor="#666666"
-        onChangeText={(emailAddress) => setEmailAddress(emailAddress)}
-        className="mb-4 rounded-lg border border-gray-300 p-3 text-base text-black"
-      />
-      <TextInput
-        value={password}
-        placeholder="Enter password"
-        placeholderTextColor="#666666"
-        secureTextEntry={true}
-        onChangeText={(password) => setPassword(password)}
-        className="mb-4 rounded-lg border border-gray-300 p-3 text-base text-black"
-      />
-      <Pressable
-        onPress={onSignInPress}
-        className="items-center rounded-lg bg-blue-600 p-3"
-      >
-        <Text className="font-semibold text-white">Continue</Text>
-      </Pressable>
-      <View className="mt-4 flex-row justify-center gap-1">
-        <Text className="text-gray-600">Don&apos;t have an account?</Text>
-        <Link href="/sign-up">
-          <Text className="font-semibold text-blue-600">Sign up</Text>
-        </Link>
+    <SafeAreaView
+      className="flex-1 bg-primary dark:bg-secondary"
+      edges={["top"]}
+    >
+      {/* 2 hình tròn trang trí mờ ở góc trên (decorative elements) */}
+      <View className="absolute -left-16 top-12 h-56 w-56 rounded-full bg-primary/80 dark:bg-background/40" />
+      <View className="absolute right-[-74px] top-40 h-72 w-72 rounded-full bg-primary/70 dark:bg-background/35" />
+
+      {/* Phần Header: Tên thương hiệu + Khẩu hiệu + Ảnh minh họa */}
+      <View className="px-6 pt-4">
+        <Text className="text-center font-mono text-5xl font-extrabold uppercase tracking-tight text-primary-foreground dark:text-foreground">
+          Grocify
+        </Text>
+
+        <Text className="mt-1 text-center text-[14px] text-primary-foreground/80 dark:text-foreground/75">
+          Plan smarter. Shop happier.
+        </Text>
+
+        <View className="mt-6 rounded-[30px] border border-white/20 bg-white/10 p-3">
+          <Image
+            source={require("../../../assets/images/auth.png")}
+            style={{ width: "100%", height: 300 }}
+            contentFit="contain"
+          />
+        </View>
       </View>
-    </View>
+
+      {/* Phần Thẻ bên dưới bo tròn 2 góc trên (rounded-t-[36px]) chứa 3 nút bấm */}
+      <View className="mt-8 flex-1 rounded-t-[36px] bg-card px-6 pb-8 pt-6">
+        <View className="self-center rounded-full bg-secondary px-3 py-1">
+          <Text className="text-xs font-semibold uppercase tracking-[1px] text-secondary-foreground">
+            Welcome Back
+          </Text>
+        </View>
+
+        <Text className="mt-2 text-center text-sm leading-6 text-muted-foreground">
+          Choose a social provider and jump right into your personalized grocery
+          experience.
+        </Text>
+
+        <View className="mt-6">
+          {/* Nút 1: Đăng nhập bằng Google */}
+          <Pressable
+            className={`mb-3 h-14 flex-row items-center rounded-2xl border border-border bg-card px-4 active:opacity-90 ${
+              isLoading ? "opacity-70" : ""
+            }`}
+            disabled={isLoading}
+            onPress={() => handleSocialAuth("oauth_google")}
+          >
+            <View className="h-8 w-8 items-center justify-center rounded-full bg-white">
+              <Image
+                source={require("../../../assets/images/google.png")}
+                style={{ width: 20, height: 20 }}
+              />
+            </View>
+
+            <Text className="ml-3 flex-1 text-lg font-semibold text-card-foreground">
+              {isGoogleClicked
+                ? "Connecting Google..."
+                : "Continue with Google"}
+            </Text>
+
+            <FontAwesome name="angle-right" size={18} color="#5f6e66" />
+          </Pressable>
+
+          {/* Nút 2: Đăng nhập bằng GitHub */}
+          <Pressable
+            className={`mb-3 h-14 flex-row items-center rounded-2xl border border-border bg-card px-4 active:opacity-90 ${
+              isLoading ? "opacity-70" : ""
+            }`}
+            disabled={isLoading}
+            onPress={() => handleSocialAuth("oauth_github")}
+          >
+            <View className="h-8 w-8 items-center justify-center rounded-full bg-white">
+              <FontAwesome name="github" size={24} color="#111" />
+            </View>
+            <Text className="ml-3 flex-1 text-lg font-semibold text-card-foreground">
+              {isGitHubClicked
+                ? "Connecting GitHub..."
+                : "Continue with GitHub"}
+            </Text>
+            <FontAwesome name="angle-right" size={18} color="#5f6e66" />
+          </Pressable>
+
+          {/* Nút 3: Đăng nhập bằng Apple */}
+          <Pressable
+            className={`mb-3 h-14 flex-row items-center rounded-2xl border border-foreground bg-foreground px-4 active:opacity-90 ${
+              isLoading ? "opacity-70" : ""
+            }`}
+            disabled={isLoading}
+            onPress={() => handleSocialAuth("oauth_apple")}
+          >
+            <View className="h-8 w-8 items-center justify-center rounded-full bg-white">
+              <FontAwesome6 name="apple" size={22} color="#111" />
+            </View>
+            <Text className="ml-3 flex-1 text-lg font-semibold text-background">
+              {isAppleClicked ? "Connecting Apple..." : "Continue with Apple"}
+            </Text>
+            <FontAwesome name="angle-right" size={18} color="#5f6e66" />
+          </Pressable>
+        </View>
+
+        <Text className="mt-3 text-center text-sm leading-5 text-muted-foreground">
+          By continuing, you agree to our Terms and Privacy Policy.
+        </Text>
+      </View>
+    </SafeAreaView>
   );
 }
