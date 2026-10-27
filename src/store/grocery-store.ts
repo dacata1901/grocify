@@ -1,6 +1,5 @@
 import { create } from "zustand";
 
-// 1. Khai báo các kiểu dữ liệu (TypeScript Types)
 export type GroceryCategory =
   | "Produce"
   | "Dairy"
@@ -28,7 +27,6 @@ export type CreateItemInput = {
 type ItemsResponse = { items: GroceryItem[] };
 type ItemResponse = { item: GroceryItem };
 
-// Bản thiết kế của Kho dữ liệu (gồm 3 biến trạng thái và 6 hàm hành động)
 type GroceryStore = {
   items: GroceryItem[];
   isLoading: boolean;
@@ -41,13 +39,12 @@ type GroceryStore = {
   clearPurchased: () => Promise<void>;
 };
 
-// 2. Tạo Kho dữ liệu với Zustand
 export const useGroceryStore = create<GroceryStore>((set, get) => ({
   items: [],
   isLoading: false,
   error: null,
 
-  // HÀM 1: Lấy danh sách món hàng từ GET /api/items
+  // 1. Lấy danh sách món hàng (GET /api/items)
   loadItems: async () => {
     set({ isLoading: true, error: null });
     try {
@@ -64,7 +61,7 @@ export const useGroceryStore = create<GroceryStore>((set, get) => ({
     }
   },
 
-  // HÀM 2: Thêm món hàng mới qua POST /api/items
+  // 2. Thêm món hàng mới (POST /api/items)
   addItem: async (input) => {
     set({ error: null });
     try {
@@ -81,7 +78,6 @@ export const useGroceryStore = create<GroceryStore>((set, get) => ({
       const payload = (await res.json()) as ItemResponse;
       if (!res.ok) throw new Error(`Request failed (${res.status})`);
 
-      // Đưa món hàng mới (payload.item) lên ĐẦU danh sách cũ (...state.items)
       set((state) => ({ items: [payload.item, ...state.items] }));
       return payload.item;
     } catch (error) {
@@ -90,9 +86,87 @@ export const useGroceryStore = create<GroceryStore>((set, get) => ({
     }
   },
 
-  // 4 hàm còn lại tạm để trống chờ Chặng 9.2
-  updateQuantity: async () => {},
-  togglePurchased: async () => {},
-  removeItem: async () => {},
-  clearPurchased: async () => {},
+  // 3. Tăng / giảm số lượng món hàng (PATCH /api/items/:id)
+  updateQuantity: async (id, quantity) => {
+    const nextQuantity = Math.max(1, quantity);
+    set({ error: null });
+
+    try {
+      const res = await fetch(`/api/items/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ quantity: nextQuantity }),
+      });
+      const payload = (await res.json()) as ItemResponse;
+      if (!res.ok) throw new Error(`Request failed (${res.status})`);
+
+      set((state) => ({
+        items: state.items.map((item) =>
+          item.id === id ? payload.item : item,
+        ),
+      }));
+    } catch (error) {
+      console.error("Error updating quantity:", error);
+      set({ error: "Something went wrong" });
+    }
+  },
+
+  // 4. Đánh dấu Đã mua / Chưa mua (PATCH /api/items/:id)
+  togglePurchased: async (id) => {
+    const currentItem = get().items.find((item) => item.id === id);
+    if (!currentItem) return;
+
+    const nextPurchased = !currentItem.purchased;
+    set({ error: null });
+    try {
+      const res = await fetch(`/api/items/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ purchased: nextPurchased }),
+      });
+
+      const payload = (await res.json()) as ItemResponse;
+      if (!res.ok) throw new Error(`Request failed (${res.status})`);
+
+      set((state) => ({
+        items: state.items.map((item) =>
+          item.id === id ? payload.item : item,
+        ),
+      }));
+    } catch (error) {
+      console.error("Error toggling purchased:", error);
+      set({ error: "Something went wrong" });
+    }
+  },
+
+  // 5. Xóa 1 món hàng (DELETE /api/items/:id)
+  removeItem: async (id) => {
+    set({ error: null });
+    try {
+      const res = await fetch(`/api/items/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error(`Request failed (${res.status})`);
+
+      set((state) => ({
+        items: state.items.filter((item) => item.id !== id),
+      }));
+    } catch (error) {
+      console.error("Error removing item:", error);
+      set({ error: "Something went wrong" });
+    }
+  },
+
+  // 6. Xóa tất cả các món đã mua (POST /api/items/clear-purchased)
+  clearPurchased: async () => {
+    set({ error: null });
+    try {
+      const res = await fetch("/api/items/clear-purchased", { method: "POST" });
+      if (!res.ok) throw new Error(`Request failed (${res.status})`);
+
+      const items = get().items.filter((item) => !item.purchased);
+      set({ items });
+    } catch (error) {
+      console.error("Error clearing purchased:", error);
+      set({ error: "Something went wrong" });
+    }
+  },
 }));

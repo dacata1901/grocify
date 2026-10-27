@@ -1,33 +1,39 @@
-import { SignedIn, SignedOut, useClerk, useUser } from "@clerk/clerk-expo";
-import { Link } from "expo-router";
-import { Pressable, Text, View } from "react-native";
+import CompletedItems from "@/components/list/CompletedItems";
+import ListHeroCard from "@/components/list/ListHeroCard";
+import PendingItemCard from "@/components/list/PendingItemCard";
+import TabScreenBackground from "@/components/TabScreenBackground";
+import { useGroceryStore } from "@/store/grocery-store";
+import { FlatList, Text, View } from "react-native";
 
-export default function HomeScreen() {
-  const { user } = useUser();
-  const { signOut } = useClerk();
+export default function ListScreen() {
+  const { items } = useGroceryStore();
+
+  // Lọc lấy những món CHƯA mua (!item.purchased) để hiển thị ở danh sách chính
+  const pendingItems = items.filter((item) => !item.purchased);
 
   return (
-    <View className="flex-1 items-center justify-center bg-white p-6">
-      <SignedIn>
-        <Text className="mb-4 text-lg font-medium text-black">
-          Hello {user?.emailAddresses[0].emailAddress}
-        </Text>
-        <Pressable
-          onPress={() => signOut()}
-          className="rounded-lg bg-red-500 px-5 py-2.5"
-        >
-          <Text className="font-semibold text-white">Sign out</Text>
-        </Pressable>
-      </SignedIn>
-
-      <SignedOut>
-        <Link href="/(auth)/sign-in">
-          <Text className="text-blue-600">Sign in</Text>
-        </Link>
-        <Link href="/(auth)/sign-up">
-          <Text className="text-blue-600">Sign up</Text>
-        </Link>
-      </SignedOut>
-    </View>
+    <FlatList
+      className="flex-1 bg-background"
+      data={pendingItems}
+      keyExtractor={(item) => item.id}
+      renderItem={({ item }) => <PendingItemCard item={item} />}
+      contentContainerStyle={{ padding: 20, gap: 14 }}
+      contentInsetAdjustmentBehavior="automatic"
+      ListHeaderComponent={
+        <View style={{ gap: 14, paddingTop: 20 }}>
+          <TabScreenBackground />
+          <ListHeroCard />
+          <View className="flex-row items-center justify-between px-1">
+            <Text className="text-sm font-semibold uppercase tracking-[1px] text-muted-foreground">
+              Shopping items
+            </Text>
+            <Text className="text-sm text-muted-foreground">
+              {pendingItems.length} active
+            </Text>
+          </View>
+        </View>
+      }
+      ListFooterComponent={<CompletedItems />}
+    />
   );
 }
